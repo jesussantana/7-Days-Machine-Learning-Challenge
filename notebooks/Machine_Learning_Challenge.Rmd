@@ -1,0 +1,122 @@
+---
+title: "Machine Learning Challenge"
+Autor: Jesus Santana
+output: html_notebook
+editor_options: 
+  chunk_output_type: console
+---
+
+0.Opciones generales
+```{r}
+options(scipen=999)#Desactiva la notacion cientifica
+```
+
+1.Instalamos y cargamos las librerías necesarias (si las instalaste anteriormente es posible que te salga un error, no pasa ignóralo y simplemente cárgalas con los library de abajo)
+```{r}
+#Instalar librerías
+install.packages('dplyr') #para manipular datos
+install.packages('skimr') #para exploración inicial
+install.packages('lubridate') #para manipular fechas
+install.packages('tidyr') #para manipular datos
+install.packages('ggplot2') #para hacer gráficos
+
+#Cargar librerías
+library(dplyr)
+library(skimr)
+library(lubridate)
+library(tidyr)
+library(ggplot2)
+```
+
+2.Cargamos los datos
+```{r}
+df <- read.csv(file = 'DataSetFallosMaquina.csv',sep=';')
+```
+
+3.Análisis inicial
+```{r}
+#Visión general
+glimpse(df)
+skim(df)
+```
+Conclusiones:
+No hay nulos
+Problemas con tipos de variables:
+- Measure2 y Measure3 también parecen más factores que enteros
+- Viendo el mínimo y el p25 de Temperature parece que tiene atípicos
+
+Analizamos en mayor detalle la tempertura
+```{r}
+ggplot(df,x=1) + geom_boxplot(aes(y=Temperature))
+```
+Conclusión: efectivamente vemos que son sólo 4 puntos
+
+4.Calidad de datos
+```{r}
+#Corregimos los tipos de variables y los atípicos
+df <- df %>%
+  mutate(Measure2 = as.factor(Measure2), #Corregimos Measure2
+         Measure3 = as.factor(Measure3)) %>% #Corregimos Measure3 
+  filter(Temperature > 50) #eliminamos los 4 atípicos de temperature
+```
+
+5.Análisis exploratorio de variables (EDA)
+```{r}
+#Exploramos las de tipo factor
+df %>%
+  select_if(is.factor) %>%
+  gather() %>%
+  ggplot(aes(value)) + geom_bar() + facet_wrap(~key,scales='free') +
+  theme(axis.text=element_text(size=6))#esto es para cambiar el tamaño del texto del eje y que se lea bien
+
+#Y las de tipo entero
+df %>%
+  select_if(is.integer) %>%
+  gather() %>%
+  ggplot(aes(value)) + geom_density() + facet_wrap(~key,scales='free') +
+  theme(axis.text=element_text(size=6))#esto es para cambiar el tamaño del texto del eje y que se lea bien
+
+#Hacemos análisis de correlaciones
+df %>%
+  select_if(is.integer) %>%
+  cor() %>% 
+  round(digits = 2)
+
+#Hacemos un zoom sobre el desbalanceo de la variable target
+table(df$Failure)
+```
+Conclusiones:
+No se perciben patrones raros en las variables
+Las variables de medidas no correlacionan
+La variable target está muy desbalanceada
+
+6.Transformación de variables
+No son necesarias grandes transformaciones porque el fichero ya viene muy limpio (no pasa así en la realidad)
+
+Tampoco vamos a crear variables sintéticas (nuevas variables) que sí haríamos en la realidad (por ej número de fallos del mismo equipo, etc.)
+
+Pero sí vamos a tener que trabajar sobre el balanceo de la variable target
+```{r}
+#Vamos a balancear usando la técnica del inframuestreo:
+#Comprobamos la penetración exacta de la target
+#Tenemos 81 sis que sobre el total de casos son un 0,9%:
+81/nrow(df) * 100
+
+#Para tener casi un 10% necesitaríamos incrementar la proporción aprox en x10
+#Entonces vamos a reducir los nos para que salga aprox esa proporción
+#Nuevo df de nos
+set.seed(1234) #para que nos salga lo mismo
+df_nos <- df %>%
+  filter(Failure == 'No') %>%
+  sample_frac(size = 0.08)
+#Df de sis
+df_sis <- df %>% filter(Failure == 'Yes')
+#Y los unimos de nuevo en un nuevo df reducido
+df_red <- rbind(df_nos,df_sis)
+#Comprobamos de nuevo la penetación de la target
+count(df_red,Failure)
+81/nrow(df_red) * 100
+```
+Ahora ya tenmos un dataset donde la target tiene un 10% de penetración (que sigue siendo poco pero lo dejaremos así)
+
+7.Modelización
