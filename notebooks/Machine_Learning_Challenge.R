@@ -30,7 +30,7 @@ library(ggplot2)
 
 2.Cargamos los datos
 ```{r}
-df <- read.csv(file = 'DataSetFallosMaquina.csv',sep=';')
+df <- read.csv(file = '../data/raw/Machine_Failure.csv',sep=';')
 ```
 
 3.Análisis inicial
