@@ -135,7 +135,6 @@ Vamos a modelizar con una regresión logística
 ```{r}
 rl <- glm(formula,df_red,family=binomial(link='logit'))
 summary(rl) #Vemos el resultado
-
 ```
 
 Sólo resultan predictivas al menos al 95% tres variables, que vamos a seleccionar como finales
