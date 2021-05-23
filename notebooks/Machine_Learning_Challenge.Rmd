@@ -11,14 +11,14 @@ editor_options:
 options(scipen=999)#Desactiva la notacion cientifica
 ```
 
-1.Instalamos y cargamos las librerías necesarias (si las instalaste anteriormente es posible que te salga un error, no pasa ignóralo y simplemente cárgalas con los library de abajo)
+1.Instalamos y cargamos las librerías necesarias
 ```{r}
 #Instalar librerías
-install.packages('dplyr') #para manipular datos
-install.packages('skimr') #para exploración inicial
-install.packages('lubridate') #para manipular fechas
-install.packages('tidyr') #para manipular datos
-install.packages('ggplot2') #para hacer gráficos
+#install.packages('dplyr') #para manipular datos
+#install.packages('skimr') #para exploración inicial
+#install.packages('lubridate') #para manipular fechas
+#install.packages('tidyr') #para manipular datos
+#install.packages('ggplot2') #para hacer gráficos
 
 #Cargar librerías
 library(dplyr)
@@ -37,7 +37,7 @@ df <- read.csv(file = '../data/raw/Machine_Failure_Control.csv',sep=';')
 ```{r}
 #Visión general
 glimpse(df)
-skim(df)
+#skim(df) Actualización: skimr parece no estar funcionando en Rstudio cloud por algún tipo de actualización que necesitan hacer. Mientras tanto déjalo así comentado en el código (con la parrilla), y fíjate en cómo sale en el vídeo para entenderlo. Cuando vuelva a funcionar le volveré a quitar la parrilla para que se ejecute de nuevo
 ```
 Conclusiones:
 No hay nulos
@@ -120,3 +120,63 @@ count(df_red,Failure)
 Ahora ya tenmos un dataset donde la target tiene un 10% de penetración (que sigue siendo poco pero lo dejaremos así)
 
 7.Modelización
+
+7.1 Dividir en entrentamiento y validación:
+No lo vamos a hacer por simplicidad y porque tenemos pocos casos
+
+7.2 Roles de las variables
+```{r}
+target <- 'Failure'
+indep <- names(df_red)[-20] #la variable 20 es Failure
+formula <- reformulate(indep,target)
+```
+
+Vamos a modelizar con una regresión logística
+```{r}
+rl <- glm(formula,df_red,family=binomial(link='logit'))
+summary(rl) #Vemos el resultado
+
+```
+
+Sólo resultan predictivas al menos al 95% tres variables, que vamos a seleccionar como finales
+```{r}
+indep_fin <- c('Temperature','Humidity','Measure9')
+formula <- reformulate(indep_fin,target) #actualizamos la fórmula
+```
+
+Y volvemos a modelizar
+```{r}
+rl <- glm(formula,df_red,family=binomial(link='logit'))
+summary(rl) #Vemos el resultado
+```
+
+Aplicamos nuestro modelo a los datos
+```{r}
+df$scoring <- predict(rl,df,type='response')
+```
+
+Tomamos la decisión de si pensamos que será un fallo o no
+```{r}
+#Como la penetración inicial era del 1%, vamos a poner un punto de corte muy alto, por ejemplo por encima del 80%
+df$prediccion <- ifelse(df$scoring > 0.8,1,0)
+```
+
+8. Evaluación del modelo
+Vamos a contrastar la predicción contra la realidad
+```{r}
+table(df$prediccion,df$Failure)
+```
+De todos los que predigo que van a fallar la mayoría fallan, pero también me estoy dejando muchos fallos en el tintero por ser tan conservador
+
+Y si fueramos menos exigentes y pusiéramos el corte un poco más abajo?
+
+Tomamos la decisión de si pensamos que será un fallo o no
+```{r}
+#Vamos a ver qué pasa si bajamos la decisión al 60%
+df$prediccion <- ifelse(df$scoring > 0.6,1,0)
+```
+
+Vamos a contrastar la predicción contra la realidad
+```{r}
+table(df$prediccion,df$Failure)
+```
