@@ -12,9 +12,9 @@
 
 ### Day 1: February 30, 2016 (Example 2) 
 
-**Today's Progress**: I've gone through many exercises on KhanAcademy.
+**Today's Progress**: 
 
-**Thoughts** I've recently started coding, and it's a great feeling when I finally solve an algorithm challenge after a lot of attempts and hours spent.
+**Thoughts** 
 
 **Link(s) to work**
 [WorkDay1](http://www.github.com)
